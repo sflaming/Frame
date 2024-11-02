@@ -1,7 +1,31 @@
 # Frame
 Frame an image with extra padding set to your preferred ratio and colour.
 
-Place the file in any folder in your `$PATH` and call it. It will to default to white `ffffff` and `5:4`.
+## How to use it
+Place the script in any folder in your `$PATH`, then call it from any folder with .jpg files. It will process all .jpg/.jpeg files in the folder from which it is called and place them in a new folder called `framed`. The frame/padding defaults to white `ffffff` and `5:4`.
+
+### Detailed instructions
+
+1. **Place the Script in the Right Directory**: 
+   Move your script into a folder that’s already in your `PATH`, like `/usr/local/bin` or a custom directory like `~/bin` if you have that in your `PATH`.
+
+2. **Make the Script Executable**:
+   Run this command to make the script executable:
+   ```shell
+   chmod +x ~/bin/your_script_name
+   ```
+
+3. **Add Custom Folder to PATH (if necessary)**:
+   If you’re using a custom folder (like `~/bin`) that isn’t already in your `PATH`, add it by editing your `~/.zshrc` file:
+   ```shell
+   echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
+   ```
+   Then, reload the configuration:
+   ```shell
+   source ~/.zshrc
+   ```
+
+After these steps, you can call your script from any folder by typing its name in the terminal.
 
 Or use any colour and ratio combination. Colour required to set a ratio.
 
