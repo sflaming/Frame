@@ -12,6 +12,7 @@ pad_to_ratio() {
     local image_path=$1
     local frame_color=$2
     local ratio=${3}
+    local web_resize=${4:-false}
     local ratio_x=${ratio%:*}
     local ratio_y=${ratio#*:}
 
@@ -72,20 +73,65 @@ pad_to_ratio() {
     if [[ $frame_color != $DEFAULT_FRAME_COLOR ]]; then
         output_file="${output_file}_${frame_color}"
     fi
+    if [[ $web_resize == true ]]; then
+        output_file="${output_file}_web"
+    fi
     output_file="${OUTPUT_DIR}/${output_file}.jpg"
 
     # Resize and pad image
     sips -Z $greatest -p $final_height $final_width --padColor $frame_color $image_path --out $output_file
+
+    # Apply web resize if flag is set
+    if [[ $web_resize == true ]]; then
+        local temp_file="${output_file%.jpg}_temp.jpg"
+        mv "$output_file" "$temp_file"
+        
+        # Get dimensions of framed image
+        local framed_width=$(sips -g pixelWidth "$temp_file" | tail -n 1 | cut -d ' ' -f 4)
+        local framed_height=$(sips -g pixelHeight "$temp_file" | tail -n 1 | cut -d ' ' -f 4)
+        
+        if (( framed_width > framed_height )); then
+            # Landscape: resize to 1080px wide
+            sips -Z 1080 "$temp_file" --out "$output_file"
+        else
+            # Portrait: resize to max 1350px tall
+            sips -Z 1350 "$temp_file" --out "$output_file"
+        fi
+        rm "$temp_file"
+    fi
 }
 
-# Command line arguments
-frame_color=${1:-$DEFAULT_FRAME_COLOR}
-ratio=${2:-$DEFAULT_RATIO}
+# Parse command line arguments
+web_resize=false
+frame_color=$DEFAULT_FRAME_COLOR
+ratio=$DEFAULT_RATIO
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -w|--web)
+            web_resize=true
+            shift
+            ;;
+        -c|--color)
+            frame_color=$2
+            shift 2
+            ;;
+        -r|--ratio)
+            ratio=$2
+            shift 2
+            ;;
+        *)
+            echo "Unknown parameter: $1"
+            echo "Usage: $0 [-w|--web] [-c|--color COLOR] [-r|--ratio RATIO]"
+            exit 1
+            ;;
+    esac
+done
 
 # Process all JPEG images
 for file in *.[jJ][pP][gG]; do
     echo ""
     echo "Processing $file..."
-    pad_to_ratio $file $frame_color $ratio
+    pad_to_ratio $file $frame_color $ratio $web_resize
     echo "$file processed with padding to $ratio."
 done
