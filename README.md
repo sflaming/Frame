@@ -76,20 +76,10 @@ Usage examples:
 - Custom colour only: `./frame.sh -c FFFFFF`
 - Custom ratio only: `./frame.sh -r 5:4`
 - Mix and match any flags: `./frame.sh -w -c FFFFFF -r 5:4`
+- Use file ficker: `./frame.sh -f`
 
 All parameters are optional and will use defaults if not specified (colour: FFFFFF, ratio: 5:4).
 
-TODO #1 Width not always as expected -- should be 1080 wide 
-TODO extract original image's ppi/dpi for later use
-TODO create function to resize an image file (set dpi and dimensions using sips) 
-TODO use custom resize function in UI for user customization
-TODO use custom resize function to resize image output to original image's dpi, 
-TODO customize font with relative values (default, smaller, smallest, larger, largest)
-<<<<<<< HEAD
 TODO flag to set specific metadata usage (default to all, but when this flag is activate show a ui with checkboxes for camera, lens, focal length, ISO, etc)
-
 TODO resize framed image to the original dimensions
 TODO stack two images in a diptych. the gap between them should be the same as the gap to the edge of a normal framed image (half the new width added by the min multiplyer) 
-=======
-TODO flag to set specific metadata usage (default to all, but when this flag is activate show a ui with checkboxes for camera, lens, focal length, ISO, etc)
->>>>>>> 60c3fcf (file picker added)
