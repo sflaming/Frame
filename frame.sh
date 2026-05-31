@@ -19,14 +19,7 @@ pad_to_ratio() {
     local OUTPUT_DIR="${image_dir}/framed"
     mkdir -p "$OUTPUT_DIR"
 
-    # Create framed directory in the same location as the image
-    local image_dir=$(dirname "$image_path")
-    local OUTPUT_DIR="${image_dir}/framed"
-    mkdir -p "$OUTPUT_DIR"
-
     # Get original dimensions
-    local original_width=$(sips -g pixelWidth "$image_path" | tail -n 1 | cut -d ' ' -f 4)
-    local original_height=$(sips -g pixelHeight "$image_path" | tail -n 1 | cut -d ' ' -f 4)
     local original_width=$(sips -g pixelWidth "$image_path" | tail -n 1 | cut -d ' ' -f 4)
     local original_height=$(sips -g pixelHeight "$image_path" | tail -n 1 | cut -d ' ' -f 4)
 
@@ -89,9 +82,11 @@ pad_to_ratio() {
     fi
     output_file="${OUTPUT_DIR}/${output_file}.jpg"
 
-    # Resize and pad image, then resave with original size
+    # Resize and pad image, then resave with original size if flag set
     sips -Z $greatest -p $final_height $final_width --padColor $frame_color "$image_path" --out "$output_file"
-    sips -Z $greatest "$output_file" --out "$output_file"
+    if [[ $reset_size == true ]]; then
+        sips -Z $greatest "$output_file" --out "$output_file"
+    fi
 
     # Apply web resize if flag is set
     if [[ $web_resize == true ]]; then
@@ -115,15 +110,77 @@ pad_to_ratio() {
     fi
 }
 
-# Function to check if a file is an image
-is_image() {
-    local file="$1"
-    # Use sips to check if it's an image (more reliable for macOS)
-    if sips -g format "$file" &>/dev/null; then
-        return 0
-    else
-        return 1
+pad_uniformly() {
+    local image_path=$1
+    local frame_color=$2
+    local web_resize=${3:-false}
+    # 'reset_size' is a global variable and will be accessed directly
+
+    local image_dir=$(dirname "$image_path")
+    local OUTPUT_DIR="${image_dir}/framed"
+    mkdir -p "$OUTPUT_DIR"
+
+    local original_width=$(sips -g pixelWidth "$image_path" | tail -n 1 | cut -d ' ' -f 4)
+    local original_height=$(sips -g pixelHeight "$image_path" | tail -n 1 | cut -d ' ' -f 4)
+
+    # Determine the shorter side
+    local shorter_side=$original_width
+    if (( original_height < original_width )); then
+        shorter_side=$original_height
     fi
+
+    # Calculate the padding amount based on the shorter side and MIN_MULTIPLIER
+    # (MIN_MULTIPLIER - 1.0) gives the fractional increase (e.g., 0.07 for 1.07)
+    local padding_factor=$(echo "$MIN_MULTIPLIER - 1.0" | bc -l)
+    local border_padding_value=$(echo "($shorter_side * 0.4) * $padding_factor" | bc -l | awk '{print int($1+0.5)}')
+
+    # Calculate final dimensions by adding the padding to both sides of width and height
+    local final_width=$((original_width + (2 * border_padding_value)))
+    local final_height=$((original_height + (2 * border_padding_value)))
+
+    echo "Original width: $original_width, Original height: $original_height"
+    echo "Shorter side: $shorter_side, Border padding value (each side): $border_padding_value"
+    echo "Uniform padding target width: $final_width, Uniform padding target height: $final_height"
+
+    local base_name=$(basename "${image_path%.*}")
+    local output_file="${base_name}_uniform_padded"
+    if [[ $frame_color != $DEFAULT_FRAME_COLOR ]]; then
+        output_file="${output_file}_${frame_color}"
+    fi
+    if [[ $web_resize == true ]]; then
+        output_file="${output_file}_web"
+    fi
+    output_file="${OUTPUT_DIR}/${output_file}.jpg"
+
+    sips -p $final_height $final_width --padColor $frame_color "$image_path" --out "$output_file"
+
+    if [[ $reset_size == true ]]; then
+        local original_greatest_dim=$original_width
+        if (( original_height > original_width )); then
+            original_greatest_dim=$original_height
+        fi
+        echo "Resetting size to greatest original dimension: $original_greatest_dim"
+        sips -Z $original_greatest_dim "$output_file" --out "$output_file"
+    fi
+
+    if [[ $web_resize == true ]]; then
+        local temp_file="${output_file%.jpg}_temp.jpg"
+        mv "$output_file" "$temp_file"
+        
+        # Get dimensions of the newly padded image for web resize logic
+        local padded_width=$(sips -g pixelWidth "$temp_file" | tail -n 1 | cut -d ' ' -f 4)
+        local padded_height=$(sips -g pixelHeight "$temp_file" | tail -n 1 | cut -d ' ' -f 4)
+        
+        if (( padded_width > padded_height )); then
+            # Landscape: resize to 1080px wide
+            sips -Z 1080 -s format jpeg -s formatOptions 100 "$temp_file" --out "$output_file" 
+        else
+            # Portrait: resize to max 1350px tall
+            sips -Z 1350 -s format jpeg -s formatOptions 100 "$temp_file"  --out "$output_file" 
+        fi
+        rm "$temp_file"
+    fi
+    echo "Uniformly padded image saved to $output_file"
 }
 
 # Function to check if a file is an image
@@ -142,7 +199,8 @@ web_resize=false
 frame_color=$DEFAULT_FRAME_COLOR
 ratio=$DEFAULT_RATIO
 use_file_picker=false
-use_file_picker=false
+reset_size=false
+apply_uniform_padding=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -162,14 +220,17 @@ while [[ $# -gt 0 ]]; do
             use_file_picker=true
             shift
             ;;
-        -f|--files)
-            use_file_picker=true
+        -p|--preserve_size)
+            reset_size=true
+            shift
+            ;;
+        -u|--uniform)
+            apply_uniform_padding=true
             shift
             ;;
         *)
             echo "Unknown parameter: $1"
-            echo "Usage: $0 [-w|--web] [-c|--color COLOR] [-r|--ratio RATIO] [-f|--files]"
-            echo "Usage: $0 [-w|--web] [-c|--color COLOR] [-r|--ratio RATIO] [-f|--files]"
+            echo "Usage: $0 [-w|--web] [-c|--color COLOR] [-r|--ratio RATIO] [-f|--files] [-p|--preserve_size] [-u|--uniform]"
             exit 1
             ;;
     esac
@@ -203,9 +264,15 @@ EOF
         
         if [[ -f "$file" ]] && is_image "$file"; then
             echo ""
-            echo "Processing $file..."
-            pad_to_ratio "$file" "$frame_color" "$ratio" "$web_resize"
-            echo "$file processed with padding to $ratio."
+            if [[ $apply_uniform_padding == true ]]; then
+                echo "Processing $file with uniform padding..."
+                pad_uniformly "$file" "$frame_color" "$web_resize"
+                echo "$file processed with uniform padding."
+            else
+                echo "Processing $file with ratio padding..."
+                pad_to_ratio "$file" "$frame_color" "$ratio" "$web_resize"
+                echo "$file processed with padding to $ratio."
+            fi
         else
             echo "Skipping $file - not a valid image file"
         fi
@@ -218,9 +285,15 @@ else
     for file in *.{jpg,JPG,jpeg,JPEG,png,PNG,HEIC,heic}(N); do
         if is_image "$file"; then
             echo ""
-            echo "Processing $file..."
-            pad_to_ratio "$file" "$frame_color" "$ratio" "$web_resize"
-            echo "$file processed with padding to $ratio."
+            if [[ $apply_uniform_padding == true ]]; then
+                echo "Processing $file with uniform padding..."
+                pad_uniformly "$file" "$frame_color" "$web_resize"
+                echo "$file processed with uniform padding."
+            else
+                echo "Processing $file with ratio padding..."
+                pad_to_ratio "$file" "$frame_color" "$ratio" "$web_resize"
+                echo "$file processed with padding to $ratio."
+            fi
         else
             echo "Skipping $file - not a valid image file"
         fi
