@@ -1,8 +1,12 @@
 # Frame
+
 Frame an image with extra padding set to your preferred ratio and colour.
 
 ## How to use it
-Place the script in any folder in your `$PATH`, then call it from any folder with images. It will process all .jpg/.jpeg files in the folder from which it is called and place them in a new folder `./framed`. The padding defaults to white `ffffff` and `5:4`.
+Install the project script as `~/bin/frame`, then call `frame` from any folder
+with images. It processes supported images in the current directory and writes
+JPEGs to `./framed`. You can also give it image paths directly. The default
+frame is white (`FFFFFF`) at a `5:4` ratio.
 
 ### Detailed instructions
 0. **Install Dependencies**: Ensure you have `sips` and `zsh` installed (standard on macOS).
@@ -10,10 +14,12 @@ Place the script in any folder in your `$PATH`, then call it from any folder wit
 1. **Place the Script in the Right Directory**: 
    Download the script or clone the repository, then move your script into a folder that's already in your `PATH`, like `/usr/local/bin` or a custom directory like `~/bin` if you have that in your `PATH`.
 
-2. **Make the Script Executable**:
-   Run this command to make the script executable:
+2. **Install the command**:
+
+   Run this from the cloned project directory:
    ```shell
-   chmod +x ~/bin/your_script_name
+   chmod +x frame.sh
+   ln -sf "$PWD/frame.sh" ~/bin/frame
    ```
 
 3. **Add Custom Folder to PATH (if necessary)**:
@@ -32,11 +38,15 @@ Or use any colour and ratio combination.
 
 ## Usage examples:
 
-- Basic usage: `./frame.sh`
-- Web resize only: `./frame.sh -w`
-- Custom colour only: `./frame.sh -c FFFFFF`
-- Custom ratio only: `./frame.sh -r 5:4`
-- Mix and match any flags: `./frame.sh -w -c FFFFFF -r 5:4`
+- Basic usage: `frame`
+- A particular image: `frame ~/Pictures/photo.jpg`
+- Web resize only: `frame -w`
+- Custom colour only: `frame -c EDD3AD`
+- Custom ratio only: `frame -r 16:9`
+- Mix and match: `frame -w -c EDD3AD -r 16:9`
+- Preserve the original image's longest dimension: `frame -p`
+- Add an even border rather than fitting a ratio: `frame -u`
+- Choose files in the macOS picker: `frame -f`
 
 
 ```
@@ -60,25 +70,14 @@ extract metadata and use it in captions
 have up to three lines of text, with two that are customizable, and another populated with shutterspeed, ISO, focal length, and  metadata 
 
 
-## v1.1
-Parameters are now flag-based and can be specified independently and in any order:
+## Options
 
-- `-w`, `--web`: Enable web-optimized resizing (1080px wide for landscape, max 1350px tall for portrait)
-- `-c`, `--colour`: Set frame colour using hex values (e.g., FFFFFF for white)
-- `-r,` `--ratio`: Set aspect ratio (e.g., 5:4, 16:9, 1:1)
-- `-f` `--files`: Choose files from a file selector
-TODO - ``: Disable metadata extraction
-
-Usage examples:
-
-- Basic usage: `./frame.sh`
-- Web resize only: `./frame.sh -w`
-- Custom colour only: `./frame.sh -c FFFFFF`
-- Custom ratio only: `./frame.sh -r 5:4`
-- Mix and match any flags: `./frame.sh -w -c FFFFFF -r 5:4`
-- Use file ficker: `./frame.sh -f`
-
-All parameters are optional and will use defaults if not specified (colour: FFFFFF, ratio: 5:4).
+- `-w`, `--web`: web-optimized resizing (1080px for landscape, 1350px for portrait)
+- `-c`, `--color` (or `--colour`): six-digit hex frame colour
+- `-r`, `--ratio`: frame ratio such as `5:4`, `16:9`, or `1:1`
+- `-f`, `--files`: choose images with the macOS picker
+- `-p`, `--preserve-size`: scale the resulting image back to the source's longest edge
+- `-u`, `--uniform`: add an even border rather than a ratio frame
 
 TODO flag to set specific metadata usage (default to all, but when this flag is activate show a ui with checkboxes for camera, lens, focal length, ISO, etc)
 TODO resize framed image to the original dimensions
